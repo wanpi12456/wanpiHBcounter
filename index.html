@@ -124,7 +124,7 @@
 </div>
 
 <script>
-    const CYCLE_TIME = 200.35;
+    const CYCLE_TIME = 200.39;
     let timeLeft = CYCLE_TIME;
     let timerId = null;
     let isRunning = false;
@@ -191,54 +191,4 @@
 
         if (isRunning) {
             clearInterval(timerId);
-            document.getElementById('startBtn').innerText = '繼續';
-            isRunning = false;
-        } else {
-            if (isFirstStart) {
-                playChimeSound();
-                incrementCastCount();
-                isFirstStart = false;
-            }
-
-            isRunning = true;
-            document.getElementById('startBtn').innerText = '暫停';
-            
-            let lastTime = Date.now();
-            timerId = setInterval(() => {
-                const now = Date.now();
-                const delta = (now - lastTime) / 1000;
-                lastTime = now;
-                
-                timeLeft -= delta;
-
-                if (timeLeft <= 12 && !hasSoundPlayedCurrentLap) {
-                    playChimeSound();
-                    hasSoundPlayedCurrentLap = true;
-                }
-
-                if (timeLeft <= 0) {
-                    timeLeft = CYCLE_TIME + timeLeft;
-                    hasSoundPlayedCurrentLap = false;
-                    incrementCastCount();
-                }
-
-                updateDisplay();
-            }, 100);
-        }
-    }
-
-    function resetTimer() {
-        clearInterval(timerId);
-        isRunning = false;
-        timeLeft = CYCLE_TIME;
-        hasSoundPlayedCurrentLap = false;
-        isFirstStart = true;
-        castCount = 0;
-        document.getElementById('castCount').innerText = '0';
-        document.getElementById('startBtn').innerText = '開始';
-        updateDisplay();
-    }
-</script>
-
-</body>
-</html>
+            document.
