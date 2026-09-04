@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聖火計時器</title>
+    <style>
+        * {
+            font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif;
+            font-weight: bold;
+        }
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #1e1e1e;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 340px;
+        }
+        .header-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 0.5rem;
+        }
+        h1 {
+            margin: 0;
+            color: #ff9800;
+            font-size: 1.6rem;
+            letter-spacing: 1px;
+        }
+        .title-icon, .counter-icon {
+            width: 48px;
+            height: 48px;
+            image-rendering: pixelated;
+        }
+        .timer-display {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 4.8rem;
+            color: #4caf50;
+            margin: 1rem 0;
+            text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        }
+        .timer-display.warning {
+            color: #ff5252;
+            text-shadow: 0 0 12px rgba(255, 82, 82, 0.5);
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        button {
+            background-color: #ff9800;
+            color: #121212;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1.25rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            background-color: #ffa726;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button#resetBtn {
+            background-color: #424242;
+            color: #e0e0e0;
+        }
+        button#resetBtn:hover {
+            background-color: #616161;
+        }
+        .counter-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background-color: #2a2a2a;
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            color: #ffb74d;
+        }
+        .cast-count {
+            color: #ffffff;
+            font-size: 1.4rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-title">
+        <img class="title-icon" src="https://cdn.yampiz.com/_rdsk/maple/skill/sk_02067.png" alt="聖火圖示" />
+        <h1>聖火計時器</h1>
+    </div>
+    <div class="timer-display" id="display">298</div>
+    <div class="controls">
+        <button id="startBtn" onclick="toggleTimer()">開始</button>
+        <button id="resetBtn" onclick="resetTimer()">重置</button>
+    </div>
+    <div class="counter-section">
+        <span>已放</span>
+        <span class="cast-count" id="castCount">0</span>
+        <span>次</span>
+        <img class="counter-icon" src="https://cdn.yampiz.com/_rdsk/maple/skill/sk_02067.png" alt="聖火圖示" />
+    </div>
+</div>
+
+<script>
+    const CYCLE_TIME = 298;
+    let timeLeft = CYCLE_TIME;
+    let timerId = null;
+    let isRunning = false;
+    let audioCtx = null;
+    let hasSoundPlayedCurrentLap = false;
+    let isFirstStart = true;
+    let castCount = 0;
+
+    function playChimeSound() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
+        const now = audioCtx.currentTime;
+        const frequencies = [523.25, 659.25, 1046.50];
+        
+        frequencies.forEach((freq, index) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + index * 0.08);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1500, now);
+
+            gain.gain.setValueAtTime(0.001, now + index * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.2, now + index * 0.08 + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.08 + 1.2);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(now + index * 0.08);
+            osc.stop(now + index * 0.08 + 1.2);
+        });
+    }
+
+    function updateDisplay() {
+        const displayElem = document.getElementById('display');
+        displayElem.innerText = Math.ceil(timeLeft);
+        
+        if (timeLeft <= 12) {
+            displayElem.classList.add('warning');
+        } else {
+            displayElem.classList.remove('warning');
+        }
+    }
+
+    function incrementCastCount() {
+        castCount++;
+        document.getElementById('castCount').innerText = castCount;
+    }
+
+    function toggleTimer() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        if (isRunning) {
+            clearInterval(timerId);
+            document.getElementById('startBtn').innerText = '繼續';
+            isRunning = false;
+        } else {
+            if (isFirstStart) {
+                playChimeSound();
+                incrementCastCount();
+                isFirstStart = false;
+            }
+
+            isRunning = true;
+            document.getElementById('startBtn').innerText = '暫停';
+            
+            let lastTime = Date.now();
+            timerId = setInterval(() => {
+                const now = Date.now();
+                const delta = (now - lastTime) / 1000;
+                lastTime = now;
+                
+                timeLeft -= delta;
+
+                if (timeLeft <= 12 && !hasSoundPlayedCurrentLap) {
+                    playChimeSound();
+                    hasSoundPlayedCurrentLap = true;
+                }
+
+                if (timeLeft <= 0) {
+                    timeLeft = CYCLE_TIME + timeLeft;
+                    hasSoundPlayedCurrentLap = false;
+                    incrementCastCount();
+                }
+
+                updateDisplay();
+            }, 100);
+        }
+    }
+
+    function resetTimer() {
+        clearInterval(timerId);
+        isRunning = false;
+        timeLeft = CYCLE_TIME;
+        hasSoundPlayedCurrentLap = false;
+        isFirstStart = true;
+        castCount = 0;
+        document.getElementById('castCount').innerText = '0';
+        document.getElementById('startBtn').innerText = '開始';
+        updateDisplay();
+    }
+</script>
+
+</body>
+</html>
