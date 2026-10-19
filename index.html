@@ -171,3 +171,74 @@
     function updateDisplay() {
         const displayElem = document.getElementById('display');
         displayElem.innerText = Math.ceil(timeLeft);
+        
+        if (timeLeft <= 12) {
+            displayElem.classList.add('warning');
+        } else {
+            displayElem.classList.remove('warning');
+        }
+    }
+
+    function incrementCastCount() {
+        castCount++;
+        document.getElementById('castCount').innerText = castCount;
+    }
+
+    function toggleTimer() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        if (isRunning) {
+            clearInterval(timerId);
+            document.getElementById('startBtn').innerText = '繼續';
+            isRunning = false;
+        } else {
+            if (isFirstStart) {
+                playChimeSound();
+                incrementCastCount();
+                isFirstStart = false;
+            }
+
+            isRunning = true;
+            document.getElementById('startBtn').innerText = '暫停';
+            
+            let lastTime = Date.now();
+            timerId = setInterval(() => {
+                const now = Date.now();
+                const delta = (now - lastTime) / 1000;
+                lastTime = now;
+                
+                timeLeft -= delta;
+
+                if (timeLeft <= 12 && !hasSoundPlayedCurrentLap) {
+                    playChimeSound();
+                    hasSoundPlayedCurrentLap = true;
+                }
+
+                if (timeLeft <= 0) {
+                    timeLeft = CYCLE_TIME + timeLeft;
+                    hasSoundPlayedCurrentLap = false;
+                    incrementCastCount();
+                }
+
+                updateDisplay();
+            }, 100);
+        }
+    }
+
+    function resetTimer() {
+        clearInterval(timerId);
+        isRunning = false;
+        timeLeft = CYCLE_TIME;
+        hasSoundPlayedCurrentLap = false;
+        isFirstStart = true;
+        castCount = 0;
+        document.getElementById('castCount').innerText = '0';
+        document.getElementById('startBtn').innerText = '開始';
+        updateDisplay();
+    }
+</script>
+
+</body>
+</html>
