@@ -79,3 +79,95 @@
         button:active {
             transform: translateY(0);
         }
+        button#resetBtn {
+            background-color: #424242;
+            color: #e0e0e0;
+        }
+        button#resetBtn:hover {
+            background-color: #616161;
+        }
+        .counter-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background-color: #2a2a2a;
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            color: #ffb74d;
+        }
+        .cast-count {
+            color: #ffffff;
+            font-size: 1.4rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-title">
+        <img class="title-icon" src="https://cdn.yampiz.com/_rdsk/maple/skill/sk_02067.png" alt="聖火圖示" />
+        <h1>聖火計時器</h1>
+    </div>
+    <div class="timer-display" id="display">118</div>
+    <div class="controls">
+        <button id="startBtn" onclick="toggleTimer()">開始</button>
+        <button id="resetBtn" onclick="resetTimer()">重置</button>
+    </div>
+    <div class="counter-section">
+        <span>已放</span>
+        <span class="cast-count" id="castCount">0</span>
+        <span>次</span>
+        <img class="counter-icon" src="https://cdn.yampiz.com/_rdsk/maple/skill/sk_02067.png" alt="聖火圖示" />
+    </div>
+</div>
+
+<script>
+    const CYCLE_TIME = 117.2;
+    let timeLeft = CYCLE_TIME;
+    let timerId = null;
+    let isRunning = false;
+    let audioCtx = null;
+    let hasSoundPlayedCurrentLap = false;
+    let isFirstStart = true;
+    let castCount = 0;
+
+    function playChimeSound() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
+        const now = audioCtx.currentTime;
+        const frequencies = [523.25, 659.25, 1046.50];
+        
+        frequencies.forEach((freq, index) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + index * 0.08);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1500, now);
+
+            gain.gain.setValueAtTime(0.001, now + index * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.2, now + index * 0.08 + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.08 + 1.2);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(now + index * 0.08);
+            osc.stop(now + index * 0.08 + 1.2);
+        });
+    }
+
+    function updateDisplay() {
+        const displayElem = document.getElementById('display');
+        displayElem.innerText = Math.ceil(timeLeft);
