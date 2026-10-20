@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聖火計時器 - 117.45秒</title>
     <style>
-        * {
-            font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif;
-            font-weight: bold;
-        }
         body {
             background-color: #121212;
-            color: #e0e0e0;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -21,72 +18,168 @@
         }
         .container {
             background-color: #1e1e1e;
-            padding: 2rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
             text-align: center;
-            width: 340px;
-        }
-        .header-title {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 0.2rem;
+            width: 320px;
         }
         h1 {
-            margin: 0;
             color: #ff9800;
-            font-size: 1.6rem;
-            letter-spacing: 1px;
+            margin: 5px 0 5px 0;
+            font-size: 1.5rem;
         }
-        .sub-subtitle {
-            font-size: 0.95rem;
-            color: #888888;
-            margin-bottom: 0.8rem;
+        .sub {
+            color: #aaaaaa;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
         }
-        .title-icon, .counter-icon {
-            width: 48px;
-            height: 48px;
-            image-rendering: pixelated;
-        }
-        .timer-display {
-            font-family: "Courier New", Courier, monospace;
-            font-size: 4.8rem;
+        .display {
+            font-size: 5rem;
             color: #4caf50;
-            margin: 1rem 0;
-            text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+            font-weight: bold;
+            margin: 20px 0;
         }
-        .timer-display.warning {
+        .display.warning {
             color: #ff5252;
-            text-shadow: 0 0 12px rgba(255, 82, 82, 0.5);
         }
-        .controls {
+        .btn-group {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             justify-content: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 20px;
         }
         button {
+            padding: 12px 24px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        #startBtn {
             background-color: #ff9800;
             color: #121212;
-            border: none;
-            padding: 14px 28px;
-            font-size: 1.25rem;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s ease;
         }
-        button:hover {
-            background-color: #ffa726;
-            transform: translateY(-2px);
-        }
-        button:active {
-            transform: translateY(0);
-        }
-        button#resetBtn {
+        #resetBtn {
             background-color: #424242;
-            color: #e0e0e0;
+            color: #ffffff;
         }
-        button#resetBtn:hover {
-            background-color: #
+        .counter {
+            background-color: #2a2a2a;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            color: #ffb74d;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔥 聖火計時器</h1>
+    <div class="sub">117.45秒版本</div>
+    <div class="display" id="display">118</div>
+    <div class="btn-group">
+        <button id="startBtn" onclick="toggleTimer()">開始</button>
+        <button id="resetBtn" onclick="resetTimer()">重置</button>
+    </div>
+    <div class="counter">
+        已放：<span id="castCount" style="color:#fff;">0</span> 次
+    </div>
+</div>
+
+<script>
+    const CYCLE_TIME = 117.45;
+    let timeLeft = CYCLE_TIME;
+    let timerId = null;
+    let isRunning = false;
+    let audioCtx = null;
+    let hasPlayedSound = false;
+    let isFirst = true;
+    let count = 0;
+
+    function playSound() {
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const now = audioCtx.currentTime;
+            [523.25, 659.25, 1046.50].forEach((f, i) => {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.frequency.value = f;
+                gain.gain.setValueAtTime(0.2, now + i * 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.08 + 0.8);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + i * 0.08);
+                osc.stop(now + i * 0.08 + 0.8);
+            });
+        } catch(e) {}
+    }
+
+    function updateView() {
+        document.getElementById('display').innerText = Math.ceil(timeLeft);
+        if (timeLeft <= 12) {
+            document.getElementById('display').classList.add('warning');
+        } else {
+            document.getElementById('display').classList.remove('warning');
+        }
+    }
+
+    function toggleTimer() {
+        if (isRunning) {
+            clearInterval(timerId);
+            isRunning = false;
+            document.getElementById('startBtn').innerText = '繼續';
+        } else {
+            if (isFirst) {
+                playSound();
+                count++;
+                document.getElementById('castCount').innerText = count;
+                isFirst = false;
+            }
+            isRunning = true;
+            document.getElementById('startBtn').innerText = '暫停';
+            
+            let last = Date.now();
+            timerId = setInterval(() => {
+                let now = Date.now();
+                let delta = (now - last) / 1000;
+                last = now;
+                
+                timeLeft -= delta;
+
+                if (timeLeft <= 12 && !hasPlayedSound) {
+                    playSound();
+                    hasPlayedSound = true;
+                }
+
+                if (timeLeft <= 0) {
+                    timeLeft = CYCLE_TIME + timeLeft;
+                    hasPlayedSound = false;
+                    count++;
+                    document.getElementById('castCount').innerText = count;
+                }
+
+                updateView();
+            }, 100);
+        }
+    }
+
+    function resetTimer() {
+        clearInterval(timerId);
+        isRunning = false;
+        timeLeft = CYCLE_TIME;
+        hasPlayedSound = false;
+        isFirst = true;
+        count = 0;
+        document.getElementById('castCount').innerText = '0';
+        document.getElementById('startBtn').innerText = '開始';
+        updateView();
+    }
+</script>
+
+</body>
+</html>
